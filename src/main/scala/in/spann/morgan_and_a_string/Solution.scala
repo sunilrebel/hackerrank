@@ -1,5 +1,7 @@
 package in.spann.morgan_and_a_string
 
+import scala.annotation.tailrec
+
 object Solution {
 
   def main(args: Array[String]) {
@@ -10,36 +12,66 @@ object Solution {
 
     for (i <- 0 to input.length - 1) {
       if (i % 2 == 0) {
-        println(generateString(input(i), input(i + 1)))
+        println(LexiFinder.generateString(input(i), input(i + 1)))
       }
     }
   }
 
-  def generateString(first: String, second: String): String = {
+}
+
+class LexiFinder(first: String, second: String) {
+
+  var firstHeadIndex = 0
+  var secondHeadIndex = 0
+
+  def generateString: String = {
     val totalLength = first.length + second.length
-    var firstHeadIndex = 0
-    var secondHeadIndex = 0
+    
     (0 to totalLength - 1).map { i =>
       val a = getCharacter(first, firstHeadIndex)
       val b = getCharacter(second, secondHeadIndex)
-
       val char = getLexicographicallyMinChar(a, b)
-      if (a.getOrElse("") == char && b.getOrElse("") == char) {
+
+      val (firstHeadIndexAnalyzed, secondHeadIndexAnalyzed) = if (first == second) (first.length, second.length) else getAnalyzedIndexes(0, 1000)
+
+      val stackName = getWhichStackShouldBePoppedOut(a, b, char, firstHeadIndexAnalyzed, secondHeadIndexAnalyzed)
+
+      stackName match {
+        case LexiFinder.firstString => firstHeadIndex += 1
+        case LexiFinder.secondString => secondHeadIndex += 1
+      }
+
+      char.get
+    }.mkString
+  }
+
+  @tailrec
+  private def getAnalyzedIndexes(beginIndex: Int, charactersToConsider: Int): (Int, Int) = {
+    val endIndex = beginIndex + charactersToConsider
+
+    val strippedFirst = first.substring(beginIndex, Math.min(endIndex, first.length))
+    val strippedSecond = second.substring(beginIndex, Math.min(endIndex, second.length))
+
+    if (strippedFirst == strippedSecond) {
+      getAnalyzedIndexes(endIndex, charactersToConsider)
+    } else {
+      (beginIndex, beginIndex)
+    }
+  }
+
+  @tailrec
+  private def getWhichStackShouldBePoppedOut(a: Option[Char], b: Option[Char], char: Option[Char], firstHeadIndex: Int, secondHeadIndex: Int): String = {
+    char match {
+      case Some(x) if a.getOrElse("") == x && b.getOrElse("") == x =>
         val nextA = getCharacter(first, firstHeadIndex + 1)
         val nextB = getCharacter(second, secondHeadIndex + 1)
-        val nextChar = getLexicographicallyMinChar(a, b)
-        if (nextChar == nextA.getOrElse("")) {
-          firstHeadIndex += 1
-        } else {
-          secondHeadIndex += 1
-        }
-      } else if (b.getOrElse("") == char) {
-        secondHeadIndex += 1
-      } else {
-        firstHeadIndex += 1
-      }
-      char
-    }.mkString
+        val nextChar = getLexicographicallyMinChar(nextA, nextB)
+        
+        getWhichStackShouldBePoppedOut(nextA, nextB, nextChar, firstHeadIndex + 1, secondHeadIndex + 1)
+      case Some(y) if a.getOrElse("") == y => LexiFinder.firstString
+      case Some(z) if b.getOrElse("") == z => LexiFinder.secondString
+      case _ => LexiFinder.firstString
+    }
   }
 
   def getCharacter(str: String, index: Int): Option[Char] = {
@@ -51,12 +83,24 @@ object Solution {
     }
   }
 
-  def getLexicographicallyMinChar(aOpt: Option[Char], bOpt: Option[Char]): Char = {
+  def getLexicographicallyMinChar(aOpt: Option[Char], bOpt: Option[Char]): Option[Char] = {
     (aOpt, bOpt) match {
-      case (Some(a), Some(b)) => if (a < b) a else b
-      case (Some(a), _) => a
-      case (_, Some(b)) => b
+      case (Some(a), Some(b)) => if (a < b) Some(a) else Some(b)
+      case (Some(a), _) => Some(a)
+      case (_, Some(b)) => Some(b)
+      case (_, _) => None
     }
   }
-
 }
+
+object LexiFinder {
+  
+  val firstString = "first"
+  val secondString = "second"
+  
+  def generateString(first: String, second: String) = {
+    val obj = new LexiFinder(first, second)
+    obj.generateString
+  }
+}
+//SCOOSCOOTERTY
